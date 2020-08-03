@@ -1,0 +1,29 @@
+plug,plugwoman {
+	help Manage plugins
+	permission plugwoman.admin
+	enable plugin:plugin* {
+		help Enable a plugin
+		permission plugwoman.admin.enable
+		hook enable
+	}
+	disable plugin:plugin* {
+		help Disable a plugin
+		permission plugwoman.admin.disable
+		hook disable
+	}
+	load jar:jarname {
+		help Load a plugin from a jar
+		permission plugwoman.admin.load
+		hook load
+	}
+	unload plugin:plugin* {
+		help Unload a plugin
+		permission plugwoman.admin.unload
+		hook unload
+	}
+	reload plugin:plugin* {
+		help Reload a plugin
+		permission plugwoman.admin.reload
+		hook reload
+	}
+}

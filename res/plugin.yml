@@ -1,0 +1,5 @@
+name: PlugWoman
+main: redempt.plugwoman.Main
+version: 1.0
+depend: [RedLib]
+api-version: 1.15
