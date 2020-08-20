@@ -21,9 +21,11 @@ plug,plugwoman {
 		permission plugwoman.admin.unload
 		hook unload
 	}
-	reload plugin:plugin* {
-		help Reload a plugin
+	reload plugin:plugin* boolean:deep?(true) {
+		help Reload a plugin and all its dependents
+		help Pass false to "deep" argument to reload just one plugin
 		permission plugwoman.admin.reload
 		hook reload
+		user player
 	}
 }

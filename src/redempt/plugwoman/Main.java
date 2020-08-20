@@ -8,14 +8,15 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommandYamlParser;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.plugin.*;
 import org.bukkit.plugin.java.JavaPlugin;
-
 import redempt.redlib.commandmanager.ArgType;
 import redempt.redlib.commandmanager.CommandHook;
 import redempt.redlib.commandmanager.CommandParser;
+import redempt.redlib.misc.ChatPrompt;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -23,10 +24,9 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class Main extends JavaPlugin implements Listener {
 	
@@ -75,22 +75,42 @@ public class Main extends JavaPlugin implements Listener {
 			return;
 		}
 		try {
-			Plugin plugin = Bukkit.getPluginManager().loadPlugin(path.toFile());
-			Bukkit.getPluginManager().enablePlugin(plugin);
+			loadPlugin(path);
 			sender.sendMessage(ChatColor.GREEN + "Plugin loaded!");
-		} catch (UnknownDependencyException | InvalidPluginException | InvalidDescriptionException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			sender.sendMessage(ChatColor.RED + "The plugin could not be loaded: " + e.getMessage());
 		}
 	}
 	
 	@CommandHook("reload")
-	public void reload(CommandSender sender, Plugin plugin) {
-		if (reloadPlugin(plugin)) {
-			sender.sendMessage(ChatColor.GREEN + "Plugin reloaded!");
+	public void deepReload(Player sender, Plugin plugin, boolean deep) throws InvalidDescriptionException {
+		List<Plugin> plugins;
+		if (deep) {
+			 plugins = getDeepReload(plugin);
 		} else {
-			sender.sendMessage(ChatColor.RED + "The plugin could not be reloaded");
+			plugins = new ArrayList<>();
+			plugins.add(plugin);
 		}
+		String list = plugins.stream().map(Plugin::getName).collect(Collectors.joining(", "));
+		sender.sendMessage(ChatColor.GREEN + "Plugins to reload: " + ChatColor.YELLOW + list);
+		ChatPrompt.prompt(sender, ChatColor.GREEN + "Type 'confirm' to confirm reload", s -> {
+			if (!s.equals("confirm")) {
+				sender.sendMessage(ChatColor.RED + "Reload cancelled.");
+				return;
+			}
+			Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> {
+				deepReloadPlugin(plugins, b -> {
+					if (b) {
+						sender.sendMessage(ChatColor.GREEN + "Plugins reloaded!");
+					} else {
+						sender.sendMessage(ChatColor.RED + "There was an error while performing a deep reload");
+					}
+				});
+			});
+		}, r -> {
+			sender.sendMessage(ChatColor.RED + "Reload cancelled.");
+		});
 	}
 	
 	private void unloadPlugin(Plugin plugin) {
@@ -137,6 +157,12 @@ public class Main extends JavaPlugin implements Listener {
 			Plugin plugin = Bukkit.getPluginManager().loadPlugin(path.toFile());
 			plugin.onLoad();
 			Bukkit.getPluginManager().enablePlugin(plugin);
+			for (Plugin plug : Bukkit.getPluginManager().getPlugins()) {
+				if (plug.equals(plugin)) {
+					continue;
+				}
+				ClassLoader loader = plug.getClass().getClassLoader();
+			}
 			return true;
 		} catch (UnknownDependencyException | InvalidPluginException | InvalidDescriptionException e) {
 			e.printStackTrace();
@@ -152,6 +178,47 @@ public class Main extends JavaPlugin implements Listener {
 			e.printStackTrace();
 			return false;
 		}
+	}
+	
+	private List<Plugin> getDeepReload(Plugin p) {
+		HashSet<Plugin> set = new HashSet<>();
+		List<Plugin> toReload = new ArrayList<>();
+		set.add(p);
+		toReload.add(p);
+		for (int pos = 0; pos < toReload.size(); pos++) {
+			for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
+				PluginDescriptionFile description = getDescription(plugin);
+				if (description.getSoftDepend().stream().map(Bukkit.getPluginManager()::getPlugin).anyMatch(set::contains)
+						|| description.getDepend().stream().map(Bukkit.getPluginManager()::getPlugin).anyMatch(set::contains)) {
+					if (set.add(plugin)) {
+						toReload.add(plugin);
+					}
+				}
+			}
+		}
+		return toReload;
+	}
+	
+	private void deepReloadPlugin(List<Plugin> plugins, Consumer<Boolean> result) {
+		for (int i = plugins.size() - 1; i >= 0; i--) {
+			unloadPlugin(plugins.get(i));
+		}
+//		for (Plugin plugin : plugins) {
+//			unloadPlugin(plugin);
+//		}
+		for (Plugin plugin : plugins) {
+			try {
+				if (!loadPlugin(Paths.get(plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()))) {
+					result.accept(false);
+					return;
+				}
+			} catch (URISyntaxException e) {
+				e.printStackTrace();
+				result.accept(false);
+				return;
+			}
+		}
+		result.accept(true);
 	}
 	
 	private PluginDescriptionFile getDescription(Plugin plugin) {
