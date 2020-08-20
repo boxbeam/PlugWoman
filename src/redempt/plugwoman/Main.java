@@ -19,6 +19,7 @@ import redempt.redlib.commandmanager.CommandParser;
 import redempt.redlib.misc.ChatPrompt;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -188,6 +189,9 @@ public class Main extends JavaPlugin implements Listener {
 		for (int pos = 0; pos < toReload.size(); pos++) {
 			for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
 				PluginDescriptionFile description = getDescription(plugin);
+				if (description == null) {
+					continue;
+				}
 				if (description.getSoftDepend().stream().map(Bukkit.getPluginManager()::getPlugin).anyMatch(set::contains)
 						|| description.getDepend().stream().map(Bukkit.getPluginManager()::getPlugin).anyMatch(set::contains)) {
 					if (set.add(plugin)) {
@@ -223,7 +227,11 @@ public class Main extends JavaPlugin implements Listener {
 	
 	private PluginDescriptionFile getDescription(Plugin plugin) {
 		try {
-			return new PluginDescriptionFile(plugin.getResource("plugin.yml"));
+			InputStream stream = plugin.getResource("plugin.yml");
+			if (stream == null) {
+			return null;
+			}
+			return new PluginDescriptionFile(stream);
 		} catch (InvalidDescriptionException e) {
 			e.printStackTrace();
 			return null;
