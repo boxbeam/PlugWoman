@@ -1,5 +1,6 @@
 package redempt.plugwoman;
 
+import jdk.tools.jlink.resources.plugins;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Keyed;
@@ -28,6 +29,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Main extends JavaPlugin implements Listener {
 	
@@ -49,6 +51,25 @@ public class Main extends JavaPlugin implements Listener {
 									}
 								}))
 				.parse().register("plugwoman", this);
+	}
+	
+	private Map<Plugin, Set<Plugin>> getDependencyMap() {
+		Map<Plugin, Set<Plugin>> map = new HashMap<>();
+		for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
+			PluginDescriptionFile description = getDescription(plugin);
+			if (description == null) {
+				continue;
+			}
+			Set<Plugin> set = new HashSet<>();
+			for (String depend : description.getDepend()) {
+				set.add(Bukkit.getPluginManager().getPlugin(depend));
+			}
+			for (String depend : description.getSoftDepend()) {
+				set.add(Bukkit.getPluginManager().getPlugin(depend));
+			}
+			map.put(plugin, set);
+		}
+		return map;
 	}
 	
 	@CommandHook("enable")
@@ -182,23 +203,27 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	private List<Plugin> getDeepReload(Plugin p) {
+		Map<Plugin, Set<Plugin>> map = getDependencyMap();
 		HashSet<Plugin> set = new HashSet<>();
 		List<Plugin> toReload = new ArrayList<>();
 		set.add(p);
 		toReload.add(p);
-		for (int pos = 0; pos < toReload.size(); pos++) {
-			for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
-				PluginDescriptionFile description = getDescription(plugin);
-				if (description == null) {
-					continue;
-				}
-				if (description.getSoftDepend().stream().map(Bukkit.getPluginManager()::getPlugin).anyMatch(set::contains)
-						|| description.getDepend().stream().map(Bukkit.getPluginManager()::getPlugin).anyMatch(set::contains)) {
-					if (set.add(plugin)) {
-						toReload.add(plugin);
+		for (int i = 0; i < toReload.size(); i++) {
+			Plugin plugin = toReload.get(i);
+			map.forEach((k, v) -> {
+				if (v.contains(plugin)) {
+					if (set.add(k)) {
+						for (int j = 0; j < toReload.size(); j++) {
+							Plugin plug = toReload.get(j);
+							if (map.get(plug).contains(k)) {
+								toReload.add(j, k);
+								return;
+							}
+						}
+						toReload.add(k);
 					}
 				}
-			}
+			});
 		}
 		return toReload;
 	}
@@ -207,9 +232,6 @@ public class Main extends JavaPlugin implements Listener {
 		for (int i = plugins.size() - 1; i >= 0; i--) {
 			unloadPlugin(plugins.get(i));
 		}
-//		for (Plugin plugin : plugins) {
-//			unloadPlugin(plugin);
-//		}
 		for (Plugin plugin : plugins) {
 			try {
 				if (!loadPlugin(Paths.get(plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()))) {
