@@ -1,6 +1,5 @@
 package redempt.plugwoman;
 
-import jdk.tools.jlink.resources.plugins;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Keyed;
@@ -20,20 +19,21 @@ import redempt.redlib.commandmanager.CommandParser;
 import redempt.redlib.misc.ChatPrompt;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-public class Main extends JavaPlugin implements Listener {
+public class PlugWoman extends JavaPlugin implements Listener {
 	
 	private SimplePluginManager manager = (SimplePluginManager) Bukkit.getPluginManager();
+	
+	public static PlugWoman getInstance() {
+		return JavaPlugin.getPlugin(PlugWoman.class);
+	}
 	
 	@Override
 	public void onEnable() {
@@ -50,13 +50,26 @@ public class Main extends JavaPlugin implements Listener {
 										return null;
 									}
 								}))
-				.parse().register("plugwoman", this);
+				.parse().register("plugwoman", new CommandListener());
+		PluginEnableErrorHandler.register();
 	}
 	
-	private Map<Plugin, Set<Plugin>> getDependencyMap() {
+	@Override
+	public void onDisable() {
+		new Thread(() -> {
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			PluginEnableErrorHandler.unregister();
+		}).start();
+	}
+	
+	public Map<Plugin, Set<Plugin>> getDependencyMap() {
 		Map<Plugin, Set<Plugin>> map = new HashMap<>();
 		for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
-			PluginDescriptionFile description = getDescription(plugin);
+			PluginDescriptionFile description = plugin.getDescription();
 			if (description == null) {
 				continue;
 			}
@@ -72,70 +85,7 @@ public class Main extends JavaPlugin implements Listener {
 		return map;
 	}
 	
-	@CommandHook("enable")
-	public void enablePlugin(CommandSender sender, Plugin plugin) {
-		manager.enablePlugin(plugin);
-		sender.sendMessage(ChatColor.GREEN + "Plugin enabled!");
-	}
-	
-	@CommandHook("disable")
-	public void disablePlugin(CommandSender sender, Plugin plugin) {
-		manager.disablePlugin(plugin);
-		sender.sendMessage(ChatColor.GREEN + "Plugin disabled!");
-	}
-	
-	@CommandHook("unload")
-	public void unloadPlugin(CommandSender sender, Plugin plugin) {
-		unloadPlugin(plugin);
-		sender.sendMessage(ChatColor.GREEN + "Plugin unloaded!");
-	}
-	
-	@CommandHook("load")
-	public void loadPlugin(CommandSender sender, Path path) {
-		if (!Files.exists(path) || !path.toString().endsWith(".jar")) {
-			sender.sendMessage(ChatColor.RED + "No such jar!");
-			return;
-		}
-		try {
-			loadPlugin(path);
-			sender.sendMessage(ChatColor.GREEN + "Plugin loaded!");
-		} catch (Exception e) {
-			e.printStackTrace();
-			sender.sendMessage(ChatColor.RED + "The plugin could not be loaded: " + e.getMessage());
-		}
-	}
-	
-	@CommandHook("reload")
-	public void deepReload(Player sender, Plugin plugin, boolean deep) throws InvalidDescriptionException {
-		List<Plugin> plugins;
-		if (deep) {
-			 plugins = getDeepReload(plugin);
-		} else {
-			plugins = new ArrayList<>();
-			plugins.add(plugin);
-		}
-		String list = plugins.stream().map(Plugin::getName).collect(Collectors.joining(", "));
-		sender.sendMessage(ChatColor.GREEN + "Plugins to reload: " + ChatColor.YELLOW + list);
-		ChatPrompt.prompt(sender, ChatColor.GREEN + "Type 'confirm' to confirm reload", s -> {
-			if (!s.equals("confirm")) {
-				sender.sendMessage(ChatColor.RED + "Reload cancelled.");
-				return;
-			}
-			Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> {
-				deepReloadPlugin(plugins, b -> {
-					if (b) {
-						sender.sendMessage(ChatColor.GREEN + "Plugins reloaded!");
-					} else {
-						sender.sendMessage(ChatColor.RED + "There was an error while performing a deep reload");
-					}
-				});
-			});
-		}, r -> {
-			sender.sendMessage(ChatColor.RED + "Reload cancelled.");
-		});
-	}
-	
-	private void unloadPlugin(Plugin plugin) {
+	public void unloadPlugin(Plugin plugin) {
 		manager.disablePlugin(plugin);
 		try {
 			Field commandMapField = manager.getClass().getDeclaredField("commandMap");
@@ -174,35 +124,50 @@ public class Main extends JavaPlugin implements Listener {
 		}
 	}
 	
-	private boolean loadPlugin(Path path) {
+	public Optional<String> loadPlugin(Path path) {
 		try {
-			Plugin plugin = Bukkit.getPluginManager().loadPlugin(path.toFile());
-			plugin.onLoad();
-			Bukkit.getPluginManager().enablePlugin(plugin);
-			for (Plugin plug : Bukkit.getPluginManager().getPlugins()) {
-				if (plug.equals(plugin)) {
-					continue;
-				}
-				ClassLoader loader = plug.getClass().getClassLoader();
+			if (path == null || !Files.exists(path)) {
+				return Optional.of("Plugin jar does not exist");
 			}
-			return true;
-		} catch (UnknownDependencyException | InvalidPluginException | InvalidDescriptionException e) {
+			Plugin plugin = Bukkit.getPluginManager().loadPlugin(path.toFile());
+			try {
+				plugin.onLoad();
+				String[] err = {null};
+				BiConsumer<String, Throwable> listener = (s, t) -> {
+					if (s.equals(plugin.getName())) {
+						StringBuilder builder = new StringBuilder("Error on enable: ").append(t.getClass().getSimpleName());
+						Throwable cause = t.getCause();
+						while (cause != null) {
+							builder.append(" -> " + cause.getClass().getSimpleName());
+							cause = cause.getCause();
+						}
+						err[0] = builder.toString();
+					}
+				};
+				PluginEnableErrorHandler.addListener(listener);
+				Bukkit.getPluginManager().enablePlugin(plugin);
+				PluginEnableErrorHandler.removeListener(listener);
+				if (err[0] != null) {
+					return Optional.of(err[0]);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				return Optional.of("Plugin could not be enabled");
+			}
+			return Optional.empty();
+		} catch (UnknownDependencyException e) {
 			e.printStackTrace();
-			return false;
+			return Optional.of("Plugin missing dependency");
+		} catch (InvalidDescriptionException e) {
+			e.printStackTrace();
+			return Optional.of("Plugin has invalid plugin.yml");
+		} catch (InvalidPluginException e) {
+			e.printStackTrace();
+			return Optional.of("Plugin is invalid");
 		}
 	}
 	
-	private boolean reloadPlugin(Plugin plugin) {
-		unloadPlugin(plugin);
-		try {
-			return loadPlugin(Paths.get(plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()));
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
-			return false;
-		}
-	}
-	
-	private List<Plugin> getDeepReload(Plugin p) {
+	public List<Plugin> getDeepReload(Plugin p) {
 		Map<Plugin, Set<Plugin>> map = getDependencyMap();
 		HashSet<Plugin> set = new HashSet<>();
 		List<Plugin> toReload = new ArrayList<>();
@@ -215,8 +180,11 @@ public class Main extends JavaPlugin implements Listener {
 					if (set.add(k)) {
 						for (int j = 0; j < toReload.size(); j++) {
 							Plugin plug = toReload.get(j);
+							plug.getPluginLoader().enablePlugin(plug);
 							if (map.get(plug).contains(k)) {
-								toReload.add(j, k);
+								Plugin tmp = toReload.get(j);
+								toReload.set(j, k);
+								toReload.add(tmp);
 								return;
 							}
 						}
@@ -228,36 +196,15 @@ public class Main extends JavaPlugin implements Listener {
 		return toReload;
 	}
 	
-	private void deepReloadPlugin(List<Plugin> plugins, Consumer<Boolean> result) {
+	public Map<Plugin, String> reloadPlugins(List<Plugin> plugins) {
 		for (int i = plugins.size() - 1; i >= 0; i--) {
 			unloadPlugin(plugins.get(i));
 		}
+		Map<Plugin, String> errors = new HashMap<>();
 		for (Plugin plugin : plugins) {
-			try {
-				if (!loadPlugin(Paths.get(plugin.getClass().getProtectionDomain().getCodeSource().getLocation().toURI()))) {
-					result.accept(false);
-					return;
-				}
-			} catch (URISyntaxException e) {
-				e.printStackTrace();
-				result.accept(false);
-				return;
-			}
+			loadPlugin(PluginJarCache.getJarPath(plugin)).ifPresent(s -> errors.put(plugin, s));
 		}
-		result.accept(true);
-	}
-	
-	private PluginDescriptionFile getDescription(Plugin plugin) {
-		try {
-			InputStream stream = plugin.getResource("plugin.yml");
-			if (stream == null) {
-			return null;
-			}
-			return new PluginDescriptionFile(stream);
-		} catch (InvalidDescriptionException e) {
-			e.printStackTrace();
-			return null;
-		}
+		return errors;
 	}
 	
 }

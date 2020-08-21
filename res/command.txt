@@ -26,6 +26,10 @@ plug,plugwoman {
 		help Pass false to "deep" argument to reload just one plugin
 		permission plugwoman.admin.reload
 		hook reload
-		user player
+	}
+	confirm {
+		help Confirm a reload
+		permission plugwoman.admin.reload
+		hook confirm
 	}
 }
