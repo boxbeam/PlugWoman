@@ -46,7 +46,13 @@ public class CommandListener {
 			sender.sendMessage(ChatColor.RED + "No such jar!");
 			return;
 		}
-		sender.sendMessage(PlugWoman.getInstance().loadPlugin(path).orElse(ChatColor.GREEN + "Plugin loaded!"));
+		String msg = PlugWoman.getInstance().loadPlugin(path).orElse(null);
+		if (msg == null) {
+			msg = ChatColor.GREEN + "Plugin loaded!";
+		} else {
+			msg = ChatColor.RED + msg;
+		}
+		sender.sendMessage(msg);
 	}
 	
 	@CommandHook("reload")
