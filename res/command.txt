@@ -21,9 +21,10 @@ plug,plugwoman {
 		permission plugwoman.admin.unload
 		hook unload
 	}
-	reload plugin:plugin* boolean:deep?(true) {
+	reload plugin:plugin* --nodeep --noconfirm {
 		help Reload a plugin and all its dependents
-		help Pass false to "deep" argument to reload just one plugin
+		help Pass --nodeep to only reload the target plugin
+		help Pass --noconfirm to skip the confirmation
 		permission plugwoman.admin.reload
 		hook reload
 	}

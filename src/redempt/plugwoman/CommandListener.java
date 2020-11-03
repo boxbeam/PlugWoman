@@ -4,6 +4,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.SimplePluginManager;
 import redempt.redlib.commandmanager.CommandHook;
@@ -56,10 +58,10 @@ public class CommandListener {
 	}
 	
 	@CommandHook("reload")
-	public void reload(CommandSender sender, Plugin plugin, boolean deep) {
+	public void reload(CommandSender sender, Plugin plugin, boolean nodeep, boolean noconfirm) {
 		PluginJarCache.clear();
 		List<Plugin> plugins;
-		if (deep) {
+		if (!nodeep) {
 			plugins = PlugWoman.getInstance().getDeepReload(plugin);
 		} else {
 			plugins = new ArrayList<>();
@@ -67,12 +69,17 @@ public class CommandListener {
 		}
 		String list = plugins.stream().map(Plugin::getName).collect(Collectors.joining(", "));
 		sender.sendMessage(ChatColor.GREEN + "Plugins to reload: " + ChatColor.YELLOW + list);
-		sender.sendMessage(ChatColor.GREEN + "Run /plug confirm to confirm reload");
-		sender.sendMessage(ChatColor.RED + "This confirmation will expire in 30 seconds");
-		confirm.put(sender, plugins);
-		Bukkit.getScheduler().scheduleSyncDelayedTask(PlugWoman.getInstance(), () -> {
-			confirm.remove(sender, plugins);
-		}, 20 * 30);
+		if (!noconfirm) {
+			sender.sendMessage(ChatColor.GREEN + "Run /plug confirm to confirm reload");
+			sender.sendMessage(ChatColor.RED + "This confirmation will expire in 30 seconds");
+			confirm.put(sender, plugins);
+			Bukkit.getScheduler().scheduleSyncDelayedTask(PlugWoman.getInstance(), () -> {
+				confirm.remove(sender, plugins);
+			}, 20 * 30);
+		} else {
+			confirm.put(sender, plugins);
+			confirm(sender);
+		}
 	}
 	
 	@CommandHook("confirm")
