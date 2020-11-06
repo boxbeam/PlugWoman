@@ -1,22 +1,17 @@
 package redempt.plugwoman;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Keyed;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommandYamlParser;
 import org.bukkit.command.SimpleCommandMap;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.plugin.*;
 import org.bukkit.plugin.java.JavaPlugin;
 import redempt.redlib.commandmanager.ArgType;
-import redempt.redlib.commandmanager.CommandHook;
 import redempt.redlib.commandmanager.CommandParser;
-import redempt.redlib.misc.ChatPrompt;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -25,7 +20,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 public class PlugWoman extends JavaPlugin implements Listener {
 	
@@ -70,9 +64,6 @@ public class PlugWoman extends JavaPlugin implements Listener {
 		Map<Plugin, Set<Plugin>> map = new HashMap<>();
 		for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
 			PluginDescriptionFile description = plugin.getDescription();
-			if (description == null) {
-				continue;
-			}
 			Set<Plugin> set = new HashSet<>();
 			for (String depend : description.getDepend()) {
 				set.add(Bukkit.getPluginManager().getPlugin(depend));
@@ -99,7 +90,6 @@ public class PlugWoman extends JavaPlugin implements Listener {
 			mapField.setAccessible(true);
 			Map<String, Command> knownCommands = (Map<String, org.bukkit.command.Command>) mapField.get(commandMap);
 			List<Command> commands = PluginCommandYamlParser.parse(plugin);
-			PluginDescriptionFile f;
 			for (org.bukkit.command.Command command : commands) {
 				knownCommands.remove(command.getName());
 			}
@@ -178,21 +168,29 @@ public class PlugWoman extends JavaPlugin implements Listener {
 			map.forEach((k, v) -> {
 				if (v.contains(plugin)) {
 					if (set.add(k)) {
-						for (int j = 0; j < toReload.size(); j++) {
-							Plugin plug = toReload.get(j);
-							plug.getPluginLoader().enablePlugin(plug);
-							if (map.get(plug).contains(k)) {
-								Plugin tmp = toReload.get(j);
-								toReload.set(j, k);
-								toReload.add(tmp);
-								return;
-							}
-						}
 						toReload.add(k);
 					}
 				}
 			});
 		}
+		boolean swap = false;
+		do {
+			swap = false;
+			for (int i = 0; i < toReload.size(); i++) {
+				Plugin plugin = toReload.get(i);
+				for (Plugin depend : map.get(plugin)) {
+					int first = toReload.indexOf(depend);
+					if (first > i) {
+						if (map.get(depend).contains(plugin) && map.get(plugin).contains(depend)) {
+							continue;
+						}
+						toReload.set(first, plugin);
+						toReload.set(i, depend);
+						swap = true;
+					}
+				}
+			}
+		} while (swap);
 		return toReload;
 	}
 	
