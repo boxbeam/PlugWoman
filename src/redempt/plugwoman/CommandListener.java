@@ -13,10 +13,7 @@ import redempt.redlib.misc.ChatPrompt;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class CommandListener {
@@ -25,47 +22,55 @@ public class CommandListener {
 	private Map<CommandSender, List<Plugin>> confirm = new HashMap<>();
 	
 	@CommandHook("enable")
-	public void enablePlugin(CommandSender sender, Plugin plugin) {
-		manager.enablePlugin(plugin);
-		sender.sendMessage(ChatColor.GREEN + "Plugin enabled!");
+	public void enablePlugin(CommandSender sender, Plugin[] plugins) {
+		for (Plugin plugin : plugins) {
+			manager.enablePlugin(plugin);
+			sender.sendMessage(ChatColor.GREEN + "Plugin " + plugin.getName() + " enabled!");
+		}
 	}
 	
 	@CommandHook("disable")
-	public void disablePlugin(CommandSender sender, Plugin plugin) {
-		manager.disablePlugin(plugin);
-		sender.sendMessage(ChatColor.GREEN + "Plugin disabled!");
+	public void disablePlugin(CommandSender sender, Plugin[] plugins) {
+		for (Plugin plugin : plugins) {
+			manager.disablePlugin(plugin);
+			sender.sendMessage(ChatColor.GREEN + "Plugin " + plugin.getName() + " disabled!");
+		}
 	}
 	
 	@CommandHook("unload")
-	public void unloadPlugin(CommandSender sender, Plugin plugin) {
-		PlugWoman.getInstance().unloadPlugin(plugin);
-		sender.sendMessage(ChatColor.GREEN + "Plugin unloaded!");
+	public void unloadPlugin(CommandSender sender, Plugin[] plugins) {
+		for (Plugin plugin : plugins) {
+			PlugWoman.getInstance().unloadPlugin(plugin);
+			sender.sendMessage(ChatColor.GREEN + "Plugin " + plugin.getName() + " unloaded!");
+		}
 	}
 	
 	@CommandHook("load")
-	public void loadPlugin(CommandSender sender, Path path) {
-		if (!Files.exists(path) || !path.toString().endsWith(".jar")) {
-			sender.sendMessage(ChatColor.RED + "No such jar!");
-			return;
+	public void loadPlugin(CommandSender sender, Path[] paths) {
+		for (Path path : paths) {
+			if (!Files.exists(path) || !path.toString().endsWith(".jar")) {
+				sender.sendMessage(ChatColor.RED + "No such jar: " + path.getFileName().toString());
+				return;
+			}
+			String msg = PlugWoman.getInstance().loadPlugin(path).orElse(null);
+			if (msg == null) {
+				msg = ChatColor.GREEN + "Jar " + path.getFileName().toString() + " loaded!";
+			} else {
+				msg = ChatColor.RED + msg;
+			}
+			sender.sendMessage(msg);
 		}
-		String msg = PlugWoman.getInstance().loadPlugin(path).orElse(null);
-		if (msg == null) {
-			msg = ChatColor.GREEN + "Plugin loaded!";
-		} else {
-			msg = ChatColor.RED + msg;
-		}
-		sender.sendMessage(msg);
 	}
 	
 	@CommandHook("reload")
-	public void reload(CommandSender sender, Plugin plugin, boolean nodeep, boolean noconfirm) {
+	public void reload(CommandSender sender, Plugin[] pluginArr, boolean nodeep, boolean noconfirm) {
 		PluginJarCache.clear();
 		List<Plugin> plugins;
 		if (!nodeep) {
-			plugins = PlugWoman.getInstance().getDeepReload(plugin);
+			plugins = PlugWoman.getInstance().getDeepReload(pluginArr);
 		} else {
 			plugins = new ArrayList<>();
-			plugins.add(plugin);
+			Collections.addAll(plugins, pluginArr);
 		}
 		String list = plugins.stream().map(Plugin::getName).collect(Collectors.joining(", "));
 		sender.sendMessage(ChatColor.GREEN + "Plugins to reload: " + ChatColor.YELLOW + list);
@@ -101,13 +106,18 @@ public class CommandListener {
 	}
 	
 	@CommandHook("delcmd")
-	public void unregisterCommand(CommandSender sender, String command) {
-		if (command.equals("plug")) {
-			sender.sendMessage(ChatColor.RED + "You cannot disable /plug!");
-			return;
+	public void unregisterCommand(CommandSender sender, String[] commands) {
+		for (String command : commands) {
+			if (command.equals("plug")) {
+				sender.sendMessage(ChatColor.RED + "You cannot disable /plug!");
+				continue;
+			}
+			PlugWoman.getInstance().getCommandMap().remove(command);
 		}
-		PlugWoman.getInstance().getCommandMap().remove(command);
-		sender.sendMessage(ChatColor.GREEN + "Command unregistered!");
+		sender.sendMessage(ChatColor.GREEN + "Commands unregistered!");
+		if (sender instanceof Player) {
+			((Player) sender).updateCommands();
+		}
 	}
 	
 }

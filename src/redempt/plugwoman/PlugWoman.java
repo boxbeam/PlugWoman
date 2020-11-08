@@ -168,12 +168,12 @@ public class PlugWoman extends JavaPlugin implements Listener {
 		}
 	}
 	
-	public List<Plugin> getDeepReload(Plugin p) {
+	public List<Plugin> getDeepReload(Plugin[] p) {
 		Map<Plugin, Set<Plugin>> map = getDependencyMap();
 		HashSet<Plugin> set = new HashSet<>();
 		List<Plugin> toReload = new ArrayList<>();
-		set.add(p);
-		toReload.add(p);
+		Collections.addAll(set, p);
+		Collections.addAll(toReload, p);
 		for (int i = 0; i < toReload.size(); i++) {
 			Plugin plugin = toReload.get(i);
 			map.forEach((k, v) -> {
