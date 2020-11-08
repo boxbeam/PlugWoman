@@ -100,4 +100,14 @@ public class CommandListener {
 		});
 	}
 	
+	@CommandHook("delcmd")
+	public void unregisterCommand(CommandSender sender, String command) {
+		if (command.equals("plug")) {
+			sender.sendMessage(ChatColor.RED + "You cannot disable /plug!");
+			return;
+		}
+		PlugWoman.getInstance().getCommandMap().remove(command);
+		sender.sendMessage(ChatColor.GREEN + "Command unregistered!");
+	}
+	
 }

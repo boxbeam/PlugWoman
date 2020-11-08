@@ -24,6 +24,7 @@ import java.util.function.BiConsumer;
 public class PlugWoman extends JavaPlugin implements Listener {
 	
 	private SimplePluginManager manager = (SimplePluginManager) Bukkit.getPluginManager();
+	private Map<String, org.bukkit.command.Command> commandMap;
 	
 	public static PlugWoman getInstance() {
 		return JavaPlugin.getPlugin(PlugWoman.class);
@@ -43,9 +44,29 @@ public class PlugWoman extends JavaPlugin implements Listener {
 										e.printStackTrace();
 										return null;
 									}
-								}))
+								}),
+						new ArgType<>("command", s -> commandMap.containsKey(s) ? s : null).tabStream(c -> commandMap.keySet().stream()))
 				.parse().register("plugwoman", new CommandListener());
 		PluginEnableErrorHandler.register();
+		Field commandMapField = null;
+		try {
+			commandMapField = manager.getClass().getDeclaredField("commandMap");
+			commandMapField.setAccessible(true);
+			SimpleCommandMap commandMap = (SimpleCommandMap) commandMapField.get(manager);
+			Class<?> clazz = commandMap.getClass();
+			while (!clazz.getSimpleName().equals("SimpleCommandMap")) {
+				clazz = clazz.getSuperclass();
+			}
+			Field mapField = clazz.getDeclaredField("knownCommands");
+			mapField.setAccessible(true);
+			this.commandMap = (Map<String, org.bukkit.command.Command>) mapField.get(commandMap);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public Map<String, org.bukkit.command.Command> getCommandMap() {
+		return commandMap;
 	}
 	
 	@Override
@@ -79,19 +100,9 @@ public class PlugWoman extends JavaPlugin implements Listener {
 	public void unloadPlugin(Plugin plugin) {
 		manager.disablePlugin(plugin);
 		try {
-			Field commandMapField = manager.getClass().getDeclaredField("commandMap");
-			commandMapField.setAccessible(true);
-			SimpleCommandMap commandMap = (SimpleCommandMap) commandMapField.get(manager);
-			Class<?> clazz = commandMap.getClass();
-			while (!clazz.getSimpleName().equals("SimpleCommandMap")) {
-				clazz = clazz.getSuperclass();
-			}
-			Field mapField = clazz.getDeclaredField("knownCommands");
-			mapField.setAccessible(true);
-			Map<String, Command> knownCommands = (Map<String, org.bukkit.command.Command>) mapField.get(commandMap);
 			List<Command> commands = PluginCommandYamlParser.parse(plugin);
 			for (org.bukkit.command.Command command : commands) {
-				knownCommands.remove(command.getName());
+				commandMap.remove(command.getName());
 			}
 			Iterator<Recipe> iterator = Bukkit.recipeIterator();
 			while (iterator.hasNext()) {

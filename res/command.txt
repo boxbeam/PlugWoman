@@ -21,7 +21,12 @@ plug,plugwoman {
 		permission plugwoman.admin.unload
 		hook unload
 	}
-	reload plugin:plugin* --nodeep --noconfirm {
+	delcmd command:command {
+		help Unregisters a command from the command map
+		permission plugwoman.admin.delcmd
+		hook delcmd
+	}
+	reload plugin:plugin* --nodeep,-d --noconfirm,-c {
 		help Reload a plugin and all its dependents
 		help Pass --nodeep to only reload the target plugin
 		help Pass --noconfirm to skip the confirmation
