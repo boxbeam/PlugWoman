@@ -8,8 +8,14 @@ import org.bukkit.command.PluginCommandYamlParser;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Recipe;
-import org.bukkit.plugin.*;
+import org.bukkit.plugin.InvalidDescriptionException;
+import org.bukkit.plugin.InvalidPluginException;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginDescriptionFile;
+import org.bukkit.plugin.SimplePluginManager;
+import org.bukkit.plugin.UnknownDependencyException;
 import org.bukkit.plugin.java.JavaPlugin;
+import redempt.redlib.RedLib;
 import redempt.redlib.commandmanager.ArgType;
 import redempt.redlib.commandmanager.CommandParser;
 
@@ -105,12 +111,14 @@ public class PlugWoman extends JavaPlugin implements Listener {
 				commandMap.remove(command.getName());
 			}
 			Iterator<Recipe> iterator = Bukkit.recipeIterator();
-			while (iterator.hasNext()) {
-				Recipe recipe = iterator.next();
-				if (recipe instanceof Keyed) {
-					NamespacedKey key = ((Keyed) recipe).getKey();
-					if (key.getNamespace().equalsIgnoreCase(plugin.getName())) {
-						iterator.remove();
+			if (RedLib.midVersion >= 9) {
+				while (iterator.hasNext()) {
+					Recipe recipe = iterator.next();
+					if (recipe instanceof Keyed) {
+						NamespacedKey key = ((Keyed) recipe).getKey();
+						if (key.getNamespace().equalsIgnoreCase(plugin.getName())) {
+							iterator.remove();
+						}
 					}
 				}
 			}
