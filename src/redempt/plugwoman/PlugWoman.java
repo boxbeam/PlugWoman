@@ -111,7 +111,7 @@ public class PlugWoman extends JavaPlugin implements Listener {
 				commandMap.remove(command.getName());
 			}
 			Iterator<Recipe> iterator = Bukkit.recipeIterator();
-			if (RedLib.midVersion >= 9) {
+			if (RedLib.MID_VERSION >= 9) {
 				while (iterator.hasNext()) {
 					Recipe recipe = iterator.next();
 					if (recipe instanceof Keyed) {
