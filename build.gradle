@@ -40,7 +40,7 @@ task deploy(dependsOn: jar) {
 	doLast {
 		copy {
 			from "build/libs"
-			into "/home/redempt/Desktop/Spigot/1.15/plugins"
+			into "/home/redempt/Desktop/Spigot/1.16/plugins"
 		}
 	}
 }

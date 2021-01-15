@@ -1,6 +1,11 @@
 plug,plugwoman {
 	help Manage plugins
 	permission plugwoman.admin
+	reloadcommands,rlcmds {
+		help Reloads all commands on the server
+		hook reloadcommands
+		permission plugwoman.admin.reloadcommands
+	}
 	enable plugin[]:plugin {
 		help Enable a plugin
 		permission plugwoman.admin.enable

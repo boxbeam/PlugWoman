@@ -42,8 +42,15 @@ public class CommandListener {
 	public void unloadPlugin(CommandSender sender, Plugin[] plugins) {
 		for (Plugin plugin : plugins) {
 			PlugWoman.getInstance().unloadPlugin(plugin);
+			PlugWoman.getInstance().syncCommands();
 			sender.sendMessage(ChatColor.GREEN + "Plugin " + plugin.getName() + " unloaded!");
 		}
+	}
+	
+	@CommandHook("reloadcommands")
+	public void reloadCommands(CommandSender sender) {
+		PlugWoman.getInstance().syncCommands();
+		sender.sendMessage(ChatColor.GREEN + "Server commands reloaded!");
 	}
 	
 	@CommandHook("load")
@@ -59,6 +66,7 @@ public class CommandListener {
 			} else {
 				msg = ChatColor.RED + msg;
 			}
+			PlugWoman.getInstance().syncCommands();
 			sender.sendMessage(msg);
 		}
 	}

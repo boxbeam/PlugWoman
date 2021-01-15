@@ -6,6 +6,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.PluginCommandYamlParser;
 import org.bukkit.command.SimpleCommandMap;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.plugin.InvalidDescriptionException;
@@ -18,6 +19,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import redempt.redlib.RedLib;
 import redempt.redlib.commandmanager.ArgType;
 import redempt.redlib.commandmanager.CommandParser;
+import redempt.redlib.nms.NMSObject;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -213,6 +215,13 @@ public class PlugWoman extends JavaPlugin implements Listener {
 		return toReload;
 	}
 	
+	public void syncCommands() {
+		if (RedLib.MID_VERSION >= 13) {
+			new NMSObject(Bukkit.getServer()).callMethod("syncCommands");
+//			Bukkit.getOnlinePlayers().forEach(Player::updateCommands);
+		}
+	}
+	
 	public Map<Plugin, String> reloadPlugins(List<Plugin> plugins) {
 		for (int i = plugins.size() - 1; i >= 0; i--) {
 			unloadPlugin(plugins.get(i));
@@ -221,6 +230,7 @@ public class PlugWoman extends JavaPlugin implements Listener {
 		for (Plugin plugin : plugins) {
 			loadPlugin(PluginJarCache.getJarPath(plugin)).ifPresent(s -> errors.put(plugin, s));
 		}
+		syncCommands();
 		return errors;
 	}
 	
