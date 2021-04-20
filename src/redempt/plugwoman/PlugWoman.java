@@ -6,7 +6,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.PluginCommandYamlParser;
 import org.bukkit.command.SimpleCommandMap;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.plugin.InvalidDescriptionException;
@@ -23,6 +22,7 @@ import redempt.redlib.nms.NMSObject;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -124,12 +124,18 @@ public class PlugWoman extends JavaPlugin implements Listener {
 					}
 				}
 			}
-			Field pluginsField = manager.getClass().getDeclaredField("plugins");
-			pluginsField.setAccessible(true);
-			List<Plugin> plugins = (List<Plugin>) pluginsField.get(manager);
+			NMSObject wrappedManager = new NMSObject(manager);
+			List<Plugin> plugins = (List<Plugin>) wrappedManager.getField("plugins").getObject();
 			plugins.remove(plugin);
-			Field loadersField = manager.getClass().getDeclaredField("fileAssociations");
-			loadersField.setAccessible(true);
+			Map<String, Plugin> lookupNames = (Map<String, Plugin>) wrappedManager.getField("lookupNames").getObject();
+			lookupNames.remove(plugin.getName());
+			URLClassLoader loader = (URLClassLoader) plugin.getClass().getClassLoader();
+			NMSObject wrappedLoader = new NMSObject(loader);
+			if (RedLib.MID_VERSION < 13) {
+				wrappedLoader.setField("plugin", null);
+				wrappedLoader.setField("pluginInit", null);
+				loader.close();
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

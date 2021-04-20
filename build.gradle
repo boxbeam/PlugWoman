@@ -23,7 +23,8 @@ repositories {
 	}
 }
 dependencies {
-	compileOnly "org.spigotmc:spigot-api:1.15.2-R0.1-SNAPSHOT"
+	compileOnly files("/home/redempt/Desktop/Spigot/1.15/spigot-1.15.2.jar")
+	compileOnly files("/home/redempt/Desktop/Spigot/1.8/spigot-1.8.8.jar")
 	compileOnly files("/home/redempt/Desktop/Spigot/1.15/plugins/RedLib.jar")
 }
 sourceSets {

@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class CommandListener {
 	
 	private SimplePluginManager manager = (SimplePluginManager) Bukkit.getPluginManager();
-	private Map<CommandSender, List<Plugin>> confirm = new HashMap<>();
+	private Map<CommandSender, Runnable> confirm = new HashMap<>();
 	
 	@CommandHook("enable")
 	public void enablePlugin(CommandSender sender, Plugin[] plugins) {
@@ -86,23 +86,16 @@ public class CommandListener {
 		if (!noconfirm) {
 			sender.sendMessage(ChatColor.GREEN + "Run /plug confirm to confirm reload");
 			sender.sendMessage(ChatColor.RED + "This confirmation will expire in 30 seconds");
-			confirm.put(sender, plugins);
+			confirm.put(sender, () -> reload(sender, plugins));
 			Bukkit.getScheduler().scheduleSyncDelayedTask(PlugWoman.getInstance(), () -> {
 				confirm.remove(sender, plugins);
 			}, 20 * 30);
 		} else {
-			confirm.put(sender, plugins);
-			confirm(sender);
+			reload(sender, plugins);
 		}
 	}
 	
-	@CommandHook("confirm")
-	public void confirm(CommandSender sender) {
-		List<Plugin> plugins = confirm.remove(sender);
-		if (plugins == null) {
-			sender.sendMessage(ChatColor.RED + "You have not queued a reload!");
-			return;
-		}
+	private void reload(CommandSender sender, List<Plugin> plugins) {
 		Map<Plugin, String> errors = PlugWoman.getInstance().reloadPlugins(plugins);
 		if (errors.size() == 0) {
 			sender.sendMessage(ChatColor.GREEN + "All plugins reloaded successfully!");
@@ -112,6 +105,16 @@ public class CommandListener {
 		errors.forEach((k, v) -> {
 			sender.sendMessage(ChatColor.RED + k.getName() + ChatColor.YELLOW + ": " + v);
 		});
+	}
+	
+	@CommandHook("confirm")
+	public void confirm(CommandSender sender) {
+		Runnable run = confirm.remove(sender);
+		if (run == null) {
+			sender.sendMessage(ChatColor.RED + "You have not queued an action!");
+			return;
+		}
+		run.run();
 	}
 	
 	@CommandHook("delcmd")
