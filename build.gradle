@@ -1,6 +1,7 @@
 plugins {
 	id "java"
 	id "idea"
+	id 'com.github.johnrengelman.shadow' version '6.0.0'
 }
 targetCompatibility = 1.8
 sourceCompatibility = 1.8
@@ -25,7 +26,14 @@ repositories {
 dependencies {
 	compileOnly files("/home/redempt/Desktop/Spigot/1.15/spigot-1.15.2.jar")
 	compileOnly files("/home/redempt/Desktop/Spigot/1.8/spigot-1.8.8.jar")
-	compileOnly files("/home/redempt/Desktop/Spigot/1.15/plugins/RedLib.jar")
+	implementation 'com.github.Redempt:RedLib:6.0'
+}
+jar.configure {
+	actions.clear()
+	dependsOn shadowJar
+}
+shadowJar.configure {
+	archiveClassifier.set('')
 }
 sourceSets {
 	main {
