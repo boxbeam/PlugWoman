@@ -34,6 +34,7 @@ jar.configure {
 }
 shadowJar.configure {
 	archiveClassifier.set('')
+	relocate 'redempt.redlib', 'libs.redempt.redlib'
 }
 sourceSets {
 	main {
@@ -49,7 +50,7 @@ task deploy(dependsOn: jar) {
 	doLast {
 		copy {
 			from "build/libs"
-			into "/home/redempt/Desktop/Spigot/1.16/plugins"
+			into "/home/redempt/Desktop/Spigot/1.17/plugins"
 		}
 	}
 }
