@@ -26,7 +26,7 @@ repositories {
 dependencies {
 	compileOnly files("/home/redempt/Desktop/Spigot/1.15/spigot-1.15.2.jar")
 	compileOnly files("/home/redempt/Desktop/Spigot/1.8/spigot-1.8.8.jar")
-	implementation 'com.github.Redempt:RedLib:6.0'
+	implementation 'com.github.Redempt:RedLib:6.0.1'
 }
 jar.configure {
 	actions.clear()
