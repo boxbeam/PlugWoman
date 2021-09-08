@@ -40,8 +40,9 @@ public class CommandListener {
 	
 	@CommandHook("unload")
 	public void unloadPlugin(CommandSender sender, Plugin[] plugins) {
+		Map<Plugin, List<org.bukkit.command.Command>> commandsByPlugin = PlugWoman.getInstance().getCommandsByPlugin();
 		for (Plugin plugin : plugins) {
-			PlugWoman.getInstance().unloadPlugin(plugin);
+			PlugWoman.getInstance().unloadPlugin(plugin, commandsByPlugin);
 			PlugWoman.getInstance().syncCommands();
 			sender.sendMessage(ChatColor.GREEN + "Plugin " + plugin.getName() + " unloaded!");
 		}

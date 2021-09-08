@@ -5,6 +5,7 @@ import org.bukkit.Keyed;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.PluginCommandYamlParser;
+import org.bukkit.command.PluginIdentifiableCommand;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Recipe;
@@ -77,6 +78,15 @@ public class PlugWoman extends JavaPlugin implements Listener {
 		return commandMap;
 	}
 	
+	public Map<Plugin, List<org.bukkit.command.Command>> getCommandsByPlugin() {
+		Map<Plugin, List<org.bukkit.command.Command>> map = new HashMap<>();
+		commandMap.values().stream().filter(PluginIdentifiableCommand.class::isInstance).forEach(c -> {
+			Plugin plugin = ((PluginIdentifiableCommand) c).getPlugin();
+			map.computeIfAbsent(plugin, k -> new ArrayList<>()).add(c);
+		});
+		return map;
+	}
+	
 	@Override
 	public void onDisable() {
 		new Thread(() -> {
@@ -105,13 +115,12 @@ public class PlugWoman extends JavaPlugin implements Listener {
 		return map;
 	}
 	
-	public void unloadPlugin(Plugin plugin) {
+	public void unloadPlugin(Plugin plugin, Map<Plugin, List<org.bukkit.command.Command>> commandsByPlugin) {
 		manager.disablePlugin(plugin);
 		try {
 			List<Command> commands = PluginCommandYamlParser.parse(plugin);
-			for (org.bukkit.command.Command command : commands) {
-				commandMap.remove(command.getName());
-			}
+			commands.forEach(c -> commandMap.remove(c.getName()));
+			commandsByPlugin.getOrDefault(plugin, new ArrayList<>()).forEach(c -> commandMap.remove(c.getName()));
 			Iterator<Recipe> iterator = Bukkit.recipeIterator();
 			if (RedLib.MID_VERSION >= 9) {
 				while (iterator.hasNext()) {
@@ -224,13 +233,13 @@ public class PlugWoman extends JavaPlugin implements Listener {
 	public void syncCommands() {
 		if (RedLib.MID_VERSION >= 13) {
 			new NMSObject(Bukkit.getServer()).callMethod("syncCommands");
-//			Bukkit.getOnlinePlayers().forEach(Player::updateCommands);
 		}
 	}
 	
 	public Map<Plugin, String> reloadPlugins(List<Plugin> plugins) {
+		Map<Plugin, List<org.bukkit.command.Command>> commandsByPlugin = getCommandsByPlugin();
 		for (int i = plugins.size() - 1; i >= 0; i--) {
-			unloadPlugin(plugins.get(i));
+			unloadPlugin(plugins.get(i), commandsByPlugin);
 		}
 		Map<Plugin, String> errors = new HashMap<>();
 		for (Plugin plugin : plugins) {
