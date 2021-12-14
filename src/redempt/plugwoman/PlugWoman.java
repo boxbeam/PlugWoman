@@ -119,8 +119,11 @@ public class PlugWoman extends JavaPlugin implements Listener {
 		manager.disablePlugin(plugin);
 		try {
 			List<Command> commands = PluginCommandYamlParser.parse(plugin);
-			commands.forEach(c -> commandMap.remove(c.getName()));
-			commandsByPlugin.getOrDefault(plugin, new ArrayList<>()).forEach(c -> commandMap.remove(c.getName()));
+			commands.addAll(commandsByPlugin.getOrDefault(plugin, new ArrayList<>()));
+			commands.forEach(c -> {
+				commandMap.remove(c.getName());
+				c.getAliases().forEach(commandMap::remove);
+			});
 			Iterator<Recipe> iterator = Bukkit.recipeIterator();
 			if (RedLib.MID_VERSION >= 9) {
 				while (iterator.hasNext()) {

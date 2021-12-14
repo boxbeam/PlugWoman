@@ -24,8 +24,7 @@ repositories {
 	}
 }
 dependencies {
-	compileOnly files("/home/redempt/Desktop/Spigot/1.15/spigot-1.15.2.jar")
-	compileOnly files("/home/redempt/Desktop/Spigot/1.8/spigot-1.8.8.jar")
+	compileOnly "org.spigotmc:spigot-api:1.17.1-R0.1-SNAPSHOT"
 	implementation 'com.github.Redempt:RedLib:6.0.6'
 }
 jar.configure {
@@ -50,7 +49,7 @@ task deploy(dependsOn: jar) {
 	doLast {
 		copy {
 			from "build/libs"
-			into "/home/redempt/Desktop/Spigot/1.17/plugins"
+			into "/home/redempt/Desktop/Spigot/1.18/plugins"
 		}
 	}
 }
