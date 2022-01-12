@@ -42,7 +42,7 @@ public class PlugWoman extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		getServer().getPluginManager().registerEvents(this, this);
-		new CommandParser(this.getResource("command.txt"))
+		new CommandParser(this.getResource("command.rdcml"))
 				.setArgTypes(new ArgType<>("plugin", Bukkit.getPluginManager()::getPlugin)
 								.tabStream(s -> Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(Plugin::getName)),
 						new ArgType<>("jar", s -> Paths.get("plugins").resolve(s))

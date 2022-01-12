@@ -1,31 +1,31 @@
 plugins {
-	id "java"
-	id "idea"
-	id 'com.github.johnrengelman.shadow' version '6.0.0'
+	id 'java'
+	id 'idea'
+	id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 targetCompatibility = 1.8
 sourceCompatibility = 1.8
 repositories {
 	mavenCentral()
 	maven {
-		url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
-		name = "spigot"
+		url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+		name = 'spigot'
 		content {
-			includeGroup "org.bukkit"
-			includeGroup "org.spigotmc"
+			includeGroup 'org.bukkit'
+			includeGroup 'org.spigotmc'
 		}
 	}
 	maven {
-		url = "https://oss.sonatype.org/content/repositories/snapshots"
+		url = 'https://oss.sonatype.org/content/repositories/snapshots'
 	}
 	mavenLocal()
 	maven {
-		url = "https://jitpack.io"
+		url = 'https://redempt.dev'
 	}
 }
 dependencies {
-	compileOnly "org.spigotmc:spigot-api:1.17.1-R0.1-SNAPSHOT"
-	implementation 'com.github.Redempt:RedLib:6.0.6'
+	compileOnly 'org.spigotmc:spigot-api:1.18.1-R0.1-SNAPSHOT'
+	implementation 'com.github.Redempt:RedLib:6.3.0.5'
 }
 jar.configure {
 	actions.clear()
@@ -33,23 +33,15 @@ jar.configure {
 }
 shadowJar.configure {
 	archiveClassifier.set('')
-	relocate 'redempt.redlib', 'libs.redempt.redlib'
+	relocate 'redempt.redlib', 'redempt.redlib.libs.redempt.redlib'
 }
 sourceSets {
 	main {
 		java {
-			srcDir "src"
+			srcDir 'src'
 		}
 		resources {
-			srcDir "res"
-		}
-	}
-}
-task deploy(dependsOn: jar) {
-	doLast {
-		copy {
-			from "build/libs"
-			into "/home/redempt/Desktop/Spigot/1.18/plugins"
+			srcDir 'res'
 		}
 	}
 }
