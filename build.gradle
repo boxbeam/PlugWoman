@@ -5,7 +5,13 @@ plugins {
 }
 targetCompatibility = 1.8
 sourceCompatibility = 1.8
-version = '1.4.3'
+var os = new ByteArrayOutputStream()
+exec {
+	commandLine "git"
+	args "log -1 --format=%h".split(" ")
+	standardOutput = os
+}
+version = os.toString().trim()
 repositories {
 	mavenCentral()
 	maven {
