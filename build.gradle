@@ -5,6 +5,7 @@ plugins {
 }
 targetCompatibility = 1.8
 sourceCompatibility = 1.8
+version = '1.4.3'
 repositories {
 	mavenCentral()
 	maven {
@@ -44,4 +45,8 @@ sourceSets {
 			srcDir 'res'
 		}
 	}
+}
+processResources {
+    outputs.upToDateWhen { false }
+    expand 'pluginVersion': project.version
 }
