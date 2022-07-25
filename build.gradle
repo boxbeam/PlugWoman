@@ -32,7 +32,7 @@ repositories {
 }
 dependencies {
 	compileOnly 'org.spigotmc:spigot-api:1.18.1-R0.1-SNAPSHOT'
-	implementation 'com.github.Redempt:RedLib:6.3.0.5'
+	implementation 'com.github.Redempt:RedLib:6.5.2.1'
 }
 jar.configure {
 	actions.clear()
@@ -40,6 +40,7 @@ jar.configure {
 }
 shadowJar.configure {
 	archiveClassifier.set('')
+	archiveName = 'PlugWoman.jar'
 	relocate 'redempt.redlib', 'redempt.redlib.libs.redempt.redlib'
 }
 sourceSets {
