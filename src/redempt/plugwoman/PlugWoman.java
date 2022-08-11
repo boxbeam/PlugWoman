@@ -124,17 +124,17 @@ public class PlugWoman extends JavaPlugin implements Listener {
 				commandMap.remove(c.getName());
 				c.getAliases().forEach(commandMap::remove);
 			});
-			Iterator<Recipe> iterator = Bukkit.recipeIterator();
 			if (RedLib.MID_VERSION >= 9) {
-				while (iterator.hasNext()) {
-					Recipe recipe = iterator.next();
+				List<NamespacedKey> toRemove = new ArrayList<>();
+				Bukkit.recipeIterator().forEachRemaining(recipe -> {
 					if (recipe instanceof Keyed) {
 						NamespacedKey key = ((Keyed) recipe).getKey();
 						if (key.getNamespace().equalsIgnoreCase(plugin.getName())) {
-							iterator.remove();
+							toRemove.add(key);
 						}
 					}
-				}
+				});
+				toRemove.forEach(Bukkit::removeRecipe);
 			}
 			NMSObject wrappedManager = new NMSObject(manager);
 			List<Plugin> plugins = (List<Plugin>) wrappedManager.getField("plugins").getObject();
