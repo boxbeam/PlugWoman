@@ -41,7 +41,7 @@ jar.configure {
 shadowJar.configure {
 	archiveClassifier.set('')
 	archiveName = 'PlugWoman.jar'
-	relocate 'redempt.redlib', 'redempt.redlib.libs.redempt.redlib'
+	relocate 'redempt.ordinate', 'redempt.plugwoman.libs.ordinate'
 }
 sourceSets {
 	main {
