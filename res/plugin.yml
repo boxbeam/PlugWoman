@@ -1,6 +1,5 @@
 name: PlugWoman
 main: redempt.plugwoman.PlugWoman
-version: ${pluginVersion}
-depend: []
+version: '${pluginVersion}'
 author: Redempt
 api-version: 1.13

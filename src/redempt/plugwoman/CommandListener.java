@@ -6,15 +6,11 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.SimplePluginManager;
-import redempt.redlib.commandmanager.CommandHook;
+import redempt.ordinate.parser.metadata.CommandHook;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class CommandListener {
@@ -73,7 +69,8 @@ public class CommandListener {
 	}
 	
 	@CommandHook("reload")
-	public void reload(CommandSender sender, Plugin[] pluginArr, boolean nodeep, boolean noconfirm) {
+	public void reload(CommandSender sender, boolean nodeep, boolean noconfirm, Plugin[] pluginArr) {
+		System.out.println("Reloading: " + Arrays.toString(pluginArr));
 		PluginJarCache.clear();
 		List<Plugin> plugins;
 		if (!nodeep) {

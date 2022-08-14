@@ -8,21 +8,14 @@ import org.bukkit.command.PluginCommandYamlParser;
 import org.bukkit.command.PluginIdentifiableCommand;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.event.Listener;
-import org.bukkit.inventory.Recipe;
-import org.bukkit.plugin.InvalidDescriptionException;
-import org.bukkit.plugin.InvalidPluginException;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.SimplePluginManager;
-import org.bukkit.plugin.UnknownDependencyException;
+import org.bukkit.plugin.*;
 import org.bukkit.plugin.java.JavaPlugin;
-import redempt.redlib.RedLib;
-import redempt.redlib.commandmanager.ArgType;
-import redempt.redlib.commandmanager.CommandParser;
-import redempt.redlib.nms.NMSObject;
+import redempt.ordinate.command.ArgType;
+import redempt.ordinate.spigot.SpigotCommandManager;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,11 +35,13 @@ public class PlugWoman extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		getServer().getPluginManager().registerEvents(this, this);
-		new CommandParser(this.getResource("command.rdcml"))
-				.setArgTypes(new ArgType<>("plugin", Bukkit.getPluginManager()::getPlugin)
-								.tabStream(s -> Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(Plugin::getName)),
+		SpigotCommandManager.getInstance(this).loadMessages()
+				.getCommandParser().setHookTargets(new CommandListener())
+				.addArgTypes(
+						new ArgType<>("plugin", Bukkit.getPluginManager()::getPlugin)
+								.completerStream((c, s) -> Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(Plugin::getName)),
 						new ArgType<>("jar", s -> Paths.get("plugins").resolve(s))
-								.tabStream(c -> {
+								.completerStream((c, str) -> {
 									try {
 										return Files.list(Paths.get("plugins")).map(p -> p.getFileName().toString()).filter(s -> s.endsWith(".jar"));
 									} catch (IOException e) {
@@ -54,10 +49,10 @@ public class PlugWoman extends JavaPlugin implements Listener {
 										return null;
 									}
 								}),
-						new ArgType<>("command", s -> commandMap.containsKey(s) ? s : null).tabStream(c -> commandMap.keySet().stream()))
-				.parse().register("plugwoman", new CommandListener());
+						new ArgType<>("command", s -> commandMap.containsKey(s) ? s : null).completerStream((c, s) -> commandMap.keySet().stream())
+				).parse(getResource("command.ordn")).register();
 		PluginEnableErrorHandler.register();
-		Field commandMapField = null;
+		Field commandMapField;
 		try {
 			commandMapField = manager.getClass().getDeclaredField("commandMap");
 			commandMapField.setAccessible(true);
@@ -124,7 +119,7 @@ public class PlugWoman extends JavaPlugin implements Listener {
 				commandMap.remove(c.getName());
 				c.getAliases().forEach(commandMap::remove);
 			});
-			if (RedLib.MID_VERSION >= 9) {
+			if (Version.MID_VERSION >= 9) {
 				List<NamespacedKey> toRemove = new ArrayList<>();
 				Bukkit.recipeIterator().forEachRemaining(recipe -> {
 					if (recipe instanceof Keyed) {
@@ -136,21 +131,24 @@ public class PlugWoman extends JavaPlugin implements Listener {
 				});
 				toRemove.forEach(Bukkit::removeRecipe);
 			}
-			NMSObject wrappedManager = new NMSObject(manager);
-			List<Plugin> plugins = (List<Plugin>) wrappedManager.getField("plugins").getObject();
+			List<Plugin> plugins = (List<Plugin>) accessible(manager.getClass().getDeclaredField("plugins")).get(manager);
 			plugins.remove(plugin);
-			Map<String, Plugin> lookupNames = (Map<String, Plugin>) wrappedManager.getField("lookupNames").getObject();
+			Map<String, Plugin> lookupNames = (Map<String, Plugin>) accessible(manager.getClass().getDeclaredField("lookupNames")).get(manager);;
 			lookupNames.remove(plugin.getName());
 			URLClassLoader loader = (URLClassLoader) plugin.getClass().getClassLoader();
-			NMSObject wrappedLoader = new NMSObject(loader);
-			if (RedLib.MID_VERSION < 13) {
-				wrappedLoader.setField("plugin", null);
-				wrappedLoader.setField("pluginInit", null);
+			if (Version.MID_VERSION < 13) {
+				accessible(loader.getClass().getDeclaredField("plugin")).set(loader, null);
+				accessible(loader.getClass().getDeclaredField("pluginInit")).set(loader, null);
 				loader.close();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	private Field accessible(Field field) {
+		field.setAccessible(true);
+		return field;
 	}
 	
 	public Optional<String> loadPlugin(Path path) {
@@ -234,8 +232,14 @@ public class PlugWoman extends JavaPlugin implements Listener {
 	}
 	
 	public void syncCommands() {
-		if (RedLib.MID_VERSION >= 13) {
-			new NMSObject(Bukkit.getServer()).callMethod("syncCommands");
+		if (Version.MID_VERSION >= 13) {
+			try {
+				Method method = getServer().getClass().getDeclaredMethod("syncCommands");
+				method.setAccessible(true);
+				method.invoke(getServer());
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 	
