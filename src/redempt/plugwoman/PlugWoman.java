@@ -36,7 +36,7 @@ public class PlugWoman extends JavaPlugin implements Listener {
 	public void onEnable() {
 		getServer().getPluginManager().registerEvents(this, this);
 		SpigotCommandManager.getInstance(this).loadMessages()
-				.getCommandParser().setHookTargets(new CommandListener())
+				.getParser().setHookTargets(new CommandListener())
 				.addArgTypes(
 						new ArgType<>("plugin", Bukkit.getPluginManager()::getPlugin)
 								.completerStream((c, s) -> Arrays.stream(Bukkit.getPluginManager().getPlugins()).map(Plugin::getName)),

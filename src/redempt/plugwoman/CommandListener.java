@@ -70,7 +70,6 @@ public class CommandListener {
 	
 	@CommandHook("reload")
 	public void reload(CommandSender sender, boolean nodeep, boolean noconfirm, Plugin[] pluginArr) {
-		System.out.println("Reloading: " + Arrays.toString(pluginArr));
 		PluginJarCache.clear();
 		List<Plugin> plugins;
 		if (!nodeep) {
